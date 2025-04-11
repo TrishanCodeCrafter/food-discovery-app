@@ -1,73 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Food Assistance Locator</title>
-    
-    <!-- Google Maps API (Replace YOUR_API_KEY) -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuG-5uLRNqwrV6jji8GU0s-ytsCRb_-RU&callback=initMap" async defer></script>
+  <meta charset="UTF-8">
+  <title>Food Assistance Centers Locator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <style>
-        #map {
-            height: 500px;
-            width: 100%;
-        }
-    </style>
+
+  <script src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&callback=initMap" async defer></script>
 </head>
+
 <body>
-    <h1>Find Food Assistance Centers Near You</h1>
+  <h2>Find Food Assistance Centers</h2>
 
-    <input type="text" id="search-box" placeholder="Enter address or ZIP code">
-    <input type="number" id="radius" placeholder="Radius (miles)" value="5">
-    <button onclick="searchLocations()">Search</button>
+  <div class="flex-container">
+    <!-- Inputs -->
+    <div class="controls">
+      <label>Destination ZIP code:</label>
+      <input type="text" id="zip" placeholder="e.g. 20010">
 
-    <div id="map"></div>
+      <label>Search Radius (miles):</label>
+      <input type="number" id="radius" value="5">
 
-    <script>
-        let map;
-        function initMap() {
-            map = new google.maps.Map(document.getElementById("map"), {
-                center: { lat: 38.9072, lng: -77.0369 },  // Default to Washington, DC
-                zoom: 10,
+      <button onclick="search()">Search Nearby Locations</button>
+    </div>
+
+    <!-- Map -->
+    <div class="map-container">
+      <div id="map"></div>
+    </div>
+  </div>
+
+  <script>
+    let map, originCoords, markers = [];
+
+    function initMap() {
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 38.9072, lng: -77.0369 }, // Default to DC
+        zoom: 10,
+      });
+
+      // Try getting user's location
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            originCoords = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            };
+            new google.maps.Marker({
+              position: originCoords,
+              map: map,
+              title: "Your Location",
+              icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
             });
-        }
+            map.setCenter(originCoords);
+          },
+          () => alert("Geolocation failed.")
+        );
+      }
+    }
 
-        function searchLocations() {
-            let address = document.getElementById("search-box").value;
-            let radius = document.getElementById("radius").value || 5;
+    function search() {
+      const zip = document.getElementById("zip").value;
+      const radius = document.getElementById("radius").value;
 
-            fetch(`/search?address=${encodeURIComponent(address)}&radius=${radius}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        alert(data.error);
-                        return;
-                    }
+      if (!zip || !radius) return alert("Please enter ZIP and radius.");
 
-                    // Clear existing markers
-                    map = new google.maps.Map(document.getElementById("map"), {
-                        center: { lat: 38.9072, lng: -77.0369 },
-                        zoom: 10,
-                    });
+      // Get coordinates for ZIP
+      fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${zip}&key={{ api_key }}`)
+        .then(res => res.json())
+        .then(data => {
+          const destCoords = data.results[0].geometry.location;
+          map.setCenter(destCoords);
 
-                    data.forEach(agency => {
-                        let marker = new google.maps.Marker({
-                            position: { lat: agency.latitude, lng: agency.longitude },
-                            map: map,
-                            title: agency.name
-                        });
+          // Clear old markers
+          markers.forEach(m => m.setMap(null));
+          markers = [];
 
-                        let infoWindow = new google.maps.InfoWindow({
-                            content: `<h4>${agency.name}</h4><p>${agency.distance} miles away</p>`
-                        });
+          // Simulate a few food banks nearby (replace with backend API)
+          const foodBanks = [
+            { name: "Food Bank A", lat: destCoords.lat + 0.01, lng: destCoords.lng + 0.01 },
+            { name: "Food Bank B", lat: destCoords.lat - 0.008, lng: destCoords.lng + 0.012 },
+          ];
 
-                        marker.addListener("click", () => {
-                            infoWindow.open(map, marker);
-                        });
-                    });
-                });
-        }
-    </script>
+          foodBanks.forEach(site => {
+            const marker = new google.maps.Marker({
+              position: { lat: site.lat, lng: site.lng },
+              map: map,
+              title: site.name
+            });
+            markers.push(marker);
+
+            const info = new google.maps.InfoWindow({
+              content: `<strong>${site.name}</strong><br><button onclick="navigateTo(${site.lat}, ${site.lng})">Get Directions</button>`
+            });
+
+            marker.addListener("click", () => {
+              info.open(map, marker);
+            });
+          });
+        });
+    }
+
+    function navigateTo(destLat, destLng) {
+      if (!originCoords) {
+        alert("User location not available.");
+        return;
+      }
+      const origin = `${originCoords.lat},${originCoords.lng}`;
+      const dest = `${destLat},${destLng}`;
+      const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&travelmode=driving`;
+      window.open(url, "_blank");
+    }
+  </script>
 </body>
 </html>

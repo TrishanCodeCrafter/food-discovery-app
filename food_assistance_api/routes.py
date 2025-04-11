@@ -1,8 +1,9 @@
 from flask import Blueprint, render_template, request, jsonify
-from food_assistance_api.database import session
-from food_assistance_api.models import Agency
+from database import session
+from models import Agency
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
+from config import GOOGLE_MAPS_API_KEY
 
 # Create a Flask Blueprint (modular route handling)
 api_blueprint = Blueprint("api", __name__)
@@ -25,7 +26,7 @@ def get_agency(agency_id):
 # Landing Page Route
 @api_blueprint.route("/", methods=["GET"])
 def landing_page():
-    return render_template("index.html")  # Render landing page
+    return render_template("index.html", api_key = GOOGLE_MAPS_API_KEY)  # Render landing page with API key for maps
 
 # Search API: Find agencies near a given location
 @api_blueprint.route("/search", methods=["GET"])

@@ -1,23 +1,25 @@
 import pandas as pd
 import requests
-from config import API_KEY # Ensure you have your API key in a config file or environment variable
+from config import GOOGLE_MAPS_API_KEY # Ensure you have your API key in a config file or environment variable
 from datetime import datetime, time
 from models import Agency, HoursOfOperation, WraparoundService, CultureServed
 
 from database import init_db, session
 
-def get_lat_lon(address):
-    api_key = API_KEY
+# Commented this section out to avoid hitting API limits during ingestion
+
+# def get_lat_lon(address):
+#     api_key = API_KEY
     
-    url = f"https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={api_key}"
+#     url = f"https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={api_key}"
     
-    response = requests.get(url)
-    data = response.json()
+#     response = requests.get(url)
+#     data = response.json()
     
-    if data["status"] == "OK":
-        location = data["results"][0]["geometry"]["location"]
-        return location["lat"], location["lng"]
-    return None, None
+#     if data["status"] == "OK":
+#         location = data["results"][0]["geometry"]["location"]
+#         return location["lat"], location["lng"]
+#     return None, None
 
 # Step 1: Initialize DB (create tables if they don’t exist)
 init_db()
