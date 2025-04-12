@@ -6,4 +6,4 @@
 
 > SQL_Playground.py is just to run DB sql queries
 
-> 
+> Ignore the food_assistance.db file outside the food_assistance_api folder
