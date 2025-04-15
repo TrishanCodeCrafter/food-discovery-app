@@ -136,7 +136,7 @@
             });
   
             const infoWindow = new google.maps.InfoWindow({
-              content: `<strong>${agency.name}</strong><br>${agency.distance} miles away<br><button onclick="navigateTo(${agency.latitude}, ${agency.longitude})">Get Directions</button>`
+              content: `<strong>${agency.name}</strong><br>${agency.distance} miles away<br>${agency.phone}<br><button onclick="navigateTo(${agency.latitude}, ${agency.longitude})">Get Directions</button>`
             });
   
             marker.addListener("click", () => infoWindow.open(map, marker));
@@ -181,7 +181,7 @@
             });
     
             const infoWindow = new google.maps.InfoWindow({
-              content: `<strong>${agency.name}</strong><br>${agency.distance} miles away<br><button onclick="navigateTo(${agency.latitude}, ${agency.longitude})">Get Directions</button>`
+              content: `<strong>${agency.name}</strong><br>${agency.distance} miles away<br>${agency.phone}<br><button onclick="navigateTo(${agency.latitude}, ${agency.longitude})">Get Directions</button>`
             });
     
             marker.addListener("click", () => infoWindow.open(map, marker));
