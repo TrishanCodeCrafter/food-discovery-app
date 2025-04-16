@@ -71,7 +71,10 @@ def search_agencies():
                 "name": agency.name,
                 "latitude": agency.latitude,
                 "longitude": agency.longitude,
-                "distance": round(distance, 2)
-            })
+                "distance": round(distance, 2),
+                "phone": agency.phone if agency.phone else "No phone number available",  # Check if phone number is available
 
+            })
+            
+   
     return jsonify(nearby_agencies)
