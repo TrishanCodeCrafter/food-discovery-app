@@ -1,8 +1,10 @@
 from flask import Blueprint, render_template, request, jsonify
-from food_assistance_api.database import session
-from food_assistance_api.models import Agency
-from geopy.geocoders import Nominatim
+from database import session
+from models import Agency
+from geopy.geocoders import Nominatim  # Geocoding library to convert addresses to coordinates
 from geopy.distance import geodesic
+from config import GOOGLE_MAPS_API_KEY # Getting API key from config and passing it to the landing page
+import requests
 
 # Create a Flask Blueprint (modular route handling)
 api_blueprint = Blueprint("api", __name__)
@@ -25,25 +27,35 @@ def get_agency(agency_id):
 # Landing Page Route
 @api_blueprint.route("/", methods=["GET"])
 def landing_page():
-    return render_template("index.html")  # Render landing page
+    return render_template("index.html", api_key = GOOGLE_MAPS_API_KEY)  # Render landing page with API key for maps
 
 # Search API: Find agencies near a given location
 @api_blueprint.route("/search", methods=["GET"])
 def search_agencies():
     address = request.args.get("address")  # Get address or ZIP code
     radius = float(request.args.get("radius", 5))  # Default radius = 5 miles
+    lat = request.args.get("lat")  # If user selects to filter from their current location
+    lng = request.args.get("lng") # If user selects to filter from their current location
+    
+    
+    # if not address:
+    #     return jsonify({"error": "Address is required"}), 400
 
-    if not address:
-        return jsonify({"error": "Address is required"}), 400
 
-    # Convert address to lat/lon
-    geolocator = Nominatim(user_agent="food_assistance_locator")
-    location = geolocator.geocode(address)
-
-    if not location:
-        return jsonify({"error": "Location not found"}), 404
-
-    user_coords = (location.latitude, location.longitude)
+    # geolocator = Nominatim(user_agent="food_assistance_locator")
+    # location = geolocator.geocode(address, country_codes="us") # Limit to US locations
+    
+    if address:
+         # Convert address(zipcode to be precise) to lat/lon 
+        geolocator = Nominatim(user_agent="food_assistance_locator")
+        location = geolocator.geocode(address,  country_codes="us") # Limit to US locations 
+        if not location:
+            return jsonify({"error": "Location not found"}), 404
+        user_coords = (location.latitude, location.longitude)
+    elif lat and lng: # If user gave the site their current location
+        user_coords = (float(lat), float(lng))    
+    else:
+        return jsonify({"error": "Address or coordinates are required"}), 400
 
     # Query agencies from database
     agencies = session.query(Agency).all()
@@ -59,7 +71,10 @@ def search_agencies():
                 "name": agency.name,
                 "latitude": agency.latitude,
                 "longitude": agency.longitude,
-                "distance": round(distance, 2)
-            })
+                "distance": round(distance, 2),
+                "phone": agency.phone if agency.phone else "No phone number available",  # Check if phone number is available
 
+            })
+            
+   
     return jsonify(nearby_agencies)

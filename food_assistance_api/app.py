@@ -1,6 +1,6 @@
 from flask import Flask
-from food_assistance_api.database import init_db  # Database setup
-from food_assistance_api.routes import api_blueprint  # Importing routes
+from database import init_db  # Database setup
+from routes import api_blueprint  # Importing routes
 
 # Initialize Flask App
 app = Flask(__name__, template_folder="templates")
