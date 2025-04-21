@@ -1,7 +1,8 @@
 flask
 sqlalchemy
 flask-sqlalchemy
-pandas
-openpyxl
 geopy
 requests
+flask-cors
+pydantic
+sqlitecloud

@@ -3,5 +3,4 @@
 /Include
 /Lib
 pyvenv.cfg
-/food_assistance_api/config.py
 /food_assistance_api/__pycache__/

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Assistance Locator</title>
+    
+    <!-- Google Maps API (Replace YOUR_API_KEY) -->
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&callback=initMap" async defer></script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css')}}">
+</head>
+<body>
+    <h1>Find Food Assistance Centers Near You</h1>
+
+    <div class="flex-container">
+        <div class="flex-item">
+            <input type="text" id="search-box" placeholder="Enter address or ZIP code">
+            <input type="number" id="radius" placeholder="Radius (miles)" value="5">
+            <button onclick="searchLocations()">Search</button>
+
+            <div id="map"></div>
+        </div>
+
+        <div class="flex-item">
+            <h2>Box 2</h2>
+        </div>
+        
+        <div class="flex-item">
+            <h2>Box 3</h2>
+        </div>
+        
+        <div class="flex-item">
+            <h2>Box 4</h2>
+        </div>
+
+    <script>
+        let map;
+        function initMap() {
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: { lat: 38.9072, lng: -77.0369 },  // Default to Washington, DC
+                zoom: 10,
+            });
+        }
+
+        function searchLocations() {
+            let address = document.getElementById("search-box").value;
+            let radius = document.getElementById("radius").value || 5;
+
+            fetch(`/search?address=${encodeURIComponent(address)}&radius=${radius}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                        return;
+                    }
+
+                    // Clear existing markers
+                    map = new google.maps.Map(document.getElementById("map"), {
+                        center: { lat: 38.9072, lng: -77.0369 },
+                        zoom: 10,
+                    });
+
+                    data.forEach(agency => {
+                        let marker = new google.maps.Marker({
+                            position: { lat: agency.latitude, lng: agency.longitude },
+                            map: map,
+                            title: agency.name
+                        });
+
+                        let infoWindow = new google.maps.InfoWindow({
+                            content: `<h4>${agency.name}</h4><p>${agency.distance} miles away</p>`
+                        });
+
+                        marker.addListener("click", () => {
+                            infoWindow.open(map, marker);
+                        });
+                    });
+                });
+        }
+    </script>
+</body>
+</html>

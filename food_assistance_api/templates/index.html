@@ -1,73 +1,271 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Food Assistance Locator</title>
-    
-    <!-- Google Maps API (Replace YOUR_API_KEY) -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuG-5uLRNqwrV6jji8GU0s-ytsCRb_-RU&callback=initMap" async defer></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Food Assistance Locator</title>
 
-    <style>
-        #map {
-            height: 500px;
-            width: 100%;
-        }
-    </style>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet"/>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f9f9f9;
+      color: #333;
+    }
+
+    header {
+      background-color: #ffffff;
+      border-bottom: 1px solid #ddd;
+      padding: 20px 40px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+
+    .content {
+      display: flex;
+      padding: 40px;
+      gap: 40px;
+    }
+
+    .controls {
+      width: 30%;
+      background-color: #fff;
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
+    }
+
+    .controls label {
+      display: block;
+      margin-top: 20px;
+      font-weight: 600;
+    }
+
+    .controls input, .controls button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    .controls button {
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin-top: 16px;
+      font-weight: 600;
+    }
+
+    .controls button:hover {
+      background-color: #0056b3;
+    }
+
+    .map-container {
+      width: 70%;
+      height: 500px;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+    }
+
+    .agent-info {
+      margin-top: 30px;
+      font-size: 14px;
+      background: #eef4ff;
+      padding: 15px;
+      border-left: 4px solid #007BFF;
+      border-radius: 6px;
+    }
+
+    .vapi-buttons {
+      margin-top: 15px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .vapi-buttons button {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      font-size: 14px;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .vapi-buttons button#call-btn {
+      background-color: #28a745;
+      color: white;
+    }
+
+    .vapi-buttons button#hangup-btn {
+      background-color: #dc3545;
+      color: white;
+    }
+
+  </style>
 </head>
+
 <body>
-    <h1>Find Food Assistance Centers Near You</h1>
 
-    <input type="text" id="search-box" placeholder="Enter address or ZIP code">
-    <input type="number" id="radius" placeholder="Radius (miles)" value="5">
-    <button onclick="searchLocations()">Search</button>
+  <header>
+    <h1>Food Assistance Locator <small><i> - By NourishAI </i></small></h1> 
+  </header>
 
-    <div id="map"></div>
+  <div class="content">
+    <!-- Left Panel -->
+    <div class="controls">
+      <label for="zip">ZIP Code</label>
+      <input type="text" id="zip" placeholder="e.g. 20740" />
 
-    <script>
-        let map;
-        function initMap() {
-            map = new google.maps.Map(document.getElementById("map"), {
-                center: { lat: 38.9072, lng: -77.0369 },  // Default to Washington, DC
-                zoom: 10,
+      <label for="radius">Search Radius (miles)</label>
+      <input type="number" id="radius" value="5" />
+
+      <button onclick="search()">Search by ZIP</button>
+      <button onclick="searchFromCurrentLocation()">Search From My Location</button>
+
+      <div class="agent-info">
+        <p><strong>Want to talk to somebody?</strong></p>
+        <p>Try our AI voice assistant:</p>
+        <p><strong>📞 +1 240-782-8375</strong></p>
+        <p style="color: gray; font-style: italic;">Web call feature coming soon</p>
+      </div>
+
+      <!-- VAPI Buttons (Disabled) -->
+      <div class="vapi-buttons">
+        <button id="call-btn" disabled>📞 Call Agent</button>
+        <button id="hangup-btn" disabled>❌ Hang Up</button>
+      </div>
+    </div>
+
+    <!-- Right Panel (Map) -->
+    <div class="map-container">
+      <div id="map"></div>
+    </div>
+  </div>
+
+  <!-- Google Maps API -->
+  <script src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&callback=initMap" async defer></script>
+
+  <script>
+    let map, originCoords, markers = [];
+
+    function initMap() {
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 38.9072, lng: -77.0369 },
+        zoom: 10,
+      });
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            originCoords = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+            };
+            new google.maps.Marker({
+              position: originCoords,
+              map: map,
+              title: "Your Location",
+              icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
             });
-        }
+            map.setCenter(originCoords);
+          },
+          () => alert("Geolocation failed.")
+        );
+      }
+    }
 
-        function searchLocations() {
-            let address = document.getElementById("search-box").value;
-            let radius = document.getElementById("radius").value || 5;
+    function search() {
+      const zip = document.getElementById("zip").value;
+      const radius = document.getElementById("radius").value;
+      if (!zip) return alert("Enter a ZIP code.");
 
-            fetch(`/search?address=${encodeURIComponent(address)}&radius=${radius}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        alert(data.error);
-                        return;
-                    }
+      fetch(`/search?address=${zip}&radius=${radius}`)
+        .then(res => res.json())
+        .then(data => {
+          markers.forEach(marker => marker.setMap(null));
+          markers = [];
 
-                    // Clear existing markers
-                    map = new google.maps.Map(document.getElementById("map"), {
-                        center: { lat: 38.9072, lng: -77.0369 },
-                        zoom: 10,
-                    });
+          if (data.length === 0) return alert("No centers found.");
+          map.setCenter({ lat: data[0].latitude, lng: data[0].longitude });
 
-                    data.forEach(agency => {
-                        let marker = new google.maps.Marker({
-                            position: { lat: agency.latitude, lng: agency.longitude },
-                            map: map,
-                            title: agency.name
-                        });
+          data.forEach(site => {
+            const marker = new google.maps.Marker({
+              position: { lat: site.latitude, lng: site.longitude },
+              map: map,
+              title: site.name,
+              phone: site.phone
+            });
 
-                        let infoWindow = new google.maps.InfoWindow({
-                            content: `<h4>${agency.name}</h4><p>${agency.distance} miles away</p>`
-                        });
+            const info = new google.maps.InfoWindow({
+              content: `<strong>${site.name}</strong><br>${site.distance} mi away <br>Phone: ${site.phone}<br><button onclick="navigateTo(${site.latitude}, ${site.longitude})">Get Directions</button>`
+            });
 
-                        marker.addListener("click", () => {
-                            infoWindow.open(map, marker);
-                        });
-                    });
-                });
-        }
-    </script>
+            marker.addListener("click", () => info.open(map, marker));
+            markers.push(marker);
+          });
+        });
+    }
+
+    function searchFromCurrentLocation() {
+      if (!originCoords) return alert("Unable to get your location.");
+      const radius = document.getElementById("radius").value || 5;
+
+      fetch(`/search?lat=${originCoords.lat}&lng=${originCoords.lng}&radius=${radius}`)
+        .then(res => res.json())
+        .then(data => {
+          markers.forEach(marker => marker.setMap(null));
+          markers = [];
+
+          if (data.length === 0) return alert("No centers found.");
+          map.setCenter(originCoords);
+
+          data.forEach(site => {
+            const marker = new google.maps.Marker({
+              position: { lat: site.latitude, lng: site.longitude },
+              map: map,
+              title: site.name,
+              phone: site.phone
+            });
+
+            const info = new google.maps.InfoWindow({
+              content: `<strong>${site.name}</strong><br>${site.distance} mi away <br>Phone: ${site.phone}<br><button onclick="navigateTo(${site.latitude}, ${site.longitude})">Get Directions</button>`
+            });
+
+            marker.addListener("click", () => info.open(map, marker));
+            markers.push(marker);
+          });
+        });
+    }
+
+    function navigateTo(lat, lng) {
+      const base = "https://www.google.com/maps/dir/?api=1";
+      navigator.geolocation.getCurrentPosition(pos => {
+        const origin = `${pos.coords.latitude},${pos.coords.longitude}`;
+        const destination = `${lat},${lng}`;
+        window.open(`${base}&origin=${origin}&destination=${destination}&travelmode=driving`);
+      });
+    }
+  </script>
+
 </body>
 </html>

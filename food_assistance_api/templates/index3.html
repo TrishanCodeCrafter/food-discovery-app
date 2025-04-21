@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Food Assistance Locator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 30px;
+    }
+    h2 {
+      text-align: center;
+    }
+    .flex-container {
+      display: flex;
+      justify-content: flex-start;
+      gap: 20px;
+    }
+    .controls {
+      width: 30%;
+      padding: 10px;
+    }
+    .map-container {
+      width: 70%;
+      height: 500px;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+      
+    }
+  </style>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">  
+
+  <script src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&callback=initMap" async defer></script>
+</head>
+
+<body>
+
+ 
+  <h2>Find Food Assistance Centers</h2>
+
+  <div class="flex-container">
+    <!-- Inputs -->
+    <div class="controls">
+      <label>Your ZIP code:</label>
+      <input type="text" id="zip" placeholder="e.g. 90210">
+      <br>
+      <br>
+      <label>Search Radius (miles):</label>
+      <input type="number" id="radius" value="5">
+
+      <button onclick="search()">Search Nearby Locations</button>
+      <button onclick="searchFromCurrentLocation()">Search From My Location</button>
+
+    </div>
+
+    <!-- Map -->
+    <div class="map-container">
+      <div id="map"></div>
+    </div>
+
+  </div>
+
+  <script>
+    let map, originCoords, markers = [];
+
+    function initMap() {
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 38.9072, lng: -77.0369 }, // Default to DC
+        zoom: 10,
+      });
+
+      // Try getting user's location
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            originCoords = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            };
+            new google.maps.Marker({
+              position: originCoords,
+              map: map,
+              title: "Your Location",
+              icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+            });
+            map.setCenter(originCoords);
+          },
+          () => alert("Geolocation failed.")
+        );
+      }
+    }
+
+    function search() {
+      const zip = document.getElementById("zip").value;
+      const radius = document.getElementById("radius").value;
+  
+      if (!zip || !radius) {
+        alert("Please enter ZIP and radius.");
+        return;
+      }
+  
+      // Call your backend API to get nearby agencies
+      fetch(`/search?address=${encodeURIComponent(zip)}&radius=${radius}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            alert(data.error);
+            return;
+          }
+  
+          // Clear old markers
+          markers.forEach(marker => marker.setMap(null));
+          markers = [];
+  
+          if (data.length === 0) {
+            alert("No food assistance centers found within the given radius.");
+            return;
+          }
+  
+          const center = {
+            lat: data[0].latitude,
+            lng: data[0].longitude
+          };
+          map.setCenter(center);
+  
+          data.forEach(agency => {
+            const marker = new google.maps.Marker({
+              position: { lat: agency.latitude, lng: agency.longitude },
+              map: map,
+              title: agency.name
+            });
+  
+            const infoWindow = new google.maps.InfoWindow({
+              content: `<strong>${agency.name}</strong><br>${agency.distance} miles away<br>${agency.phone}<br><button onclick="navigateTo(${agency.latitude}, ${agency.longitude})">Get Directions</button>`
+            });
+  
+            marker.addListener("click", () => infoWindow.open(map, marker));
+            markers.push(marker);
+          });
+        });
+    }
+  
+
+    // New function to search from current location
+    function searchFromCurrentLocation() {
+      if (!originCoords) {
+        alert("Unable to determine your current location.");
+        return;
+      }
+      const radius = document.getElementById("radius").value || 5;
+    
+      // Call backend with coordinates
+      fetch(`/search?lat=${originCoords.lat}&lng=${originCoords.lng}&radius=${radius}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            alert(data.error);
+            return;
+          }
+    
+          markers.forEach(marker => marker.setMap(null));
+          markers = [];
+    
+          if (data.length === 0) {
+            alert("No food assistance centers found near your location.");
+            return;
+          }
+    
+          map.setCenter(originCoords);
+    
+          data.forEach(agency => {
+            const marker = new google.maps.Marker({
+              position: { lat: agency.latitude, lng: agency.longitude },
+              map: map,
+              title: agency.name
+            });
+    
+            const infoWindow = new google.maps.InfoWindow({
+              content: `<strong>${agency.name}</strong><br>${agency.distance} miles away<br>${agency.phone}<br><button onclick="navigateTo(${agency.latitude}, ${agency.longitude})">Get Directions</button>`
+            });
+    
+            marker.addListener("click", () => infoWindow.open(map, marker));
+            markers.push(marker);
+          });
+        });
+    }
+    
+
+    function navigateTo(lat, lng) {
+      const base = "https://www.google.com/maps/dir/?api=1";
+      navigator.geolocation.getCurrentPosition(pos => {
+        const origin = `${pos.coords.latitude},${pos.coords.longitude}`;
+        const destination = `${lat},${lng}`;
+        window.open(`${base}&origin=${origin}&destination=${destination}&travelmode=driving`);
+      });
+    }
+  </script>
+</body>
+</html>
