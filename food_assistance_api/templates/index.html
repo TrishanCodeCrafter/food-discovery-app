@@ -62,6 +62,11 @@
       font-size: 14px;
     }
 
+    input:invalid {
+      border: 1px solid red;
+    }
+    
+
     .controls button {
       background-color: #007BFF;
       color: white;
@@ -121,27 +126,161 @@
       color: white;
     }
 
+    .toggle-container {
+      margin-top: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .toggle-label {
+      font-size: 16px;
+
+      font-weight: 500;
+      color: #333;
+    }
+    
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 28px;
+    }
+    
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: 0.4s;
+      border-radius: 34px;
+    }
+    
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 22px;
+      width: 22px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.4s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .slider {
+      background-color: #007BFF;
+    }
+    
+    input:checked + .slider:before {
+      transform: translateX(22px);
+    }
+    
+
+    .fancy-dropdown {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      padding: 10px 12px;
+      border-radius: 5px;
+      font-size: 14px;
+      width: 100%;
+      font-family: 'Inter', sans-serif;
+      background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.41.59L6 5.17l4.59-4.58L12 2l-6 6-6-6z' fill='%23666'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 12px;
+      transition: border 0.3s;
+    }
+    
+    .fancy-dropdown:focus {
+      border-color: #007BFF;
+      outline: none;
+    }
+    
+
   </style>
 </head>
 
 <body>
 
   <header>
-    <h1>Food Assistance Locator <small><i> - By NourishAI </i></small></h1> 
+    <h1>Food Assistance Locator <small><i> - By NourishAI 🤖</i></small></h1> 
   </header>
 
   <div class="content">
     <!-- Left Panel -->
     <div class="controls">
       <label for="zip">ZIP Code</label>
-      <input type="text" id="zip" placeholder="e.g. 20740" />
+      <input type="text" id="zip" placeholder="e.g. 20740" maxlength="5" pattern="\d{5}" inputmode="numeric" oninput="validateZipInput(this)" />
+      
+      <!-- START OF ZIP INPUT VALIDATION STUFF -->
+      <script>
+        function validateZipInput(input) {
+          // Remove non-numeric characters
+          input.value = input.value.replace(/\D/g, '');
+        }
+      </script>
+      <!-- END OF ZIP INPUT VALIDATION STUFF -->
+
+
 
       <label for="radius">Search Radius (miles)</label>
-      <input type="number" id="radius" value="5" />
+      <input type="number" id="radius" placeholder="1 to 100 miles" value="5" min="1" max="100" step="1" oninput="validateRadiusInput(this)" />
 
-      <button onclick="search()">Search by ZIP</button>
-      <button onclick="searchFromCurrentLocation()">Search From My Location</button>
+      <!-- START OF RADIUS INPUT VALIDATION STUFF -->
+      <script>
+        function validateRadiusInput(input) {
+          // Remove symbols, negative signs, decimals, and non-digits
+          input.value = input.value.replace(/[^\d]/g, '');
+        
+          // Convert to number and clamp the range to 1–100
+          let value = parseInt(input.value);
+          if (value > 100) input.value = 100;
+          else if (value < 1 && input.value !== '') input.value = 1;
+        }
+        
+      </script>
+      <!-- END OF RADIUS INPUT VALIDATION STUFF -->
 
+
+
+      <button onclick="search()">Search by ZIP </button>
+      <button onclick="searchFromCurrentLocation()">Search From My Location 📌</button>
+
+      
+      <label for="day">Day of the Week</label>
+      <select id="day" class="fancy-dropdown">
+        <option value="monday">Monday</option>
+        <option value="tuesday">Tuesday</option>
+        <option value="wednesday">Wednesday</option>
+        <option value="thursday">Thursday</option>
+        <option value="friday">Friday</option>
+        <option value="saturday">Saturday</option>
+        <option value="sunday">Sunday</option>
+      </select>
+
+
+      <div class="toggle-container">
+        <label class="switch">
+          <input type="checkbox" id="homeDelivery">
+          <span class="slider round"></span>
+        </label>
+        <span class="toggle-label"><strong>I prefer home delivery (if available)</strong></span>
+      </div>
+      
+      <!--
       <div class="agent-info">
         <p><strong>Want to talk to somebody?</strong></p>
         <p>Try our AI voice assistant:</p>
@@ -149,18 +288,27 @@
         <p style="color: gray; font-style: italic;">Web call feature coming soon</p>
       </div>
 
+      -->
       <!-- VAPI Buttons (Disabled) -->
+
+      <!--
       <div class="vapi-buttons">
         <button id="call-btn" disabled>📞 Call Agent</button>
         <button id="hangup-btn" disabled>❌ Hang Up</button>
       </div>
     </div>
+    -->
 
+
+
+
+    
+    </div>  
     <!-- Right Panel (Map) -->
-    <div class="map-container">
-      <div id="map"></div>
-    </div>
+  <div class="map-container">
+    <div id="map"></div>
   </div>
+  
 
   <!-- Google Maps API -->
   <script src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&callback=initMap" async defer></script>
@@ -194,18 +342,33 @@
       }
     }
 
-    function search() {
+    async function search() {
       const zip = document.getElementById("zip").value;
       const radius = document.getElementById("radius").value;
+      const day = document.getElementById("day").value;
+      const homeDelivery = document.getElementById("homeDelivery").checked;
       if (!zip) return alert("Enter a ZIP code.");
+      
+     // Checking if ZIP exists using Zippopotam.us API
+     const zipValid = await fetch(`https://api.zippopotam.us/us/${zip}`).then(res => res.ok);
+     if (!zipValid) return alert("Invalid ZIP code.");
+        
 
-      fetch(`/search?address=${zip}&radius=${radius}`)
-        .then(res => res.json())
+      fetch(`/search?address=${zip}&radius=${radius}&day=${day}&homeDelivery=${homeDelivery}`)
+        .then(async res => {
+          if (!res.ok) {
+            const errorData = await res.json();
+            return alert(errorData.error || "An unexpected error occurred.");
+            return [];
+          }
+          //return res.json();
+        })
         .then(data => {
           markers.forEach(marker => marker.setMap(null));
           markers = [];
 
           if (data.length === 0) return alert("No centers found.");
+        
           map.setCenter({ lat: data[0].latitude, lng: data[0].longitude });
 
           data.forEach(site => {
@@ -217,7 +380,15 @@
             });
 
             const info = new google.maps.InfoWindow({
-              content: `<strong>${site.name}</strong><br>${site.distance} mi away <br>Phone: ${site.phone}<br><button onclick="navigateTo(${site.latitude}, ${site.longitude})">Get Directions</button>`
+              content: `<strong>${site.name}</strong><br><br>
+              <strong>Address:</strong> ${site.address}<br>
+              <strong>Distance:</strong> ${site.distance} mi away <br>
+              <strong>Phone:</strong> ${site.phone}<br>
+              <strong>Hours of Operation:</strong> ${site.hours}<br>  
+              <strong>Appointment:</strong> ${site.appointment}<br>
+              <strong>Prepared Meals:</strong> ${site.Prepared_meals}<br>
+              <strong>Home Delivery:</strong> ${site.home_delivery}<br>
+              <button onclick="navigateTo(${site.latitude}, ${site.longitude})">Get Directions</button>`
             });
 
             marker.addListener("click", () => info.open(map, marker));
@@ -229,8 +400,24 @@
     function searchFromCurrentLocation() {
       if (!originCoords) return alert("Unable to get your location.");
       const radius = document.getElementById("radius").value || 5;
+      const day = document.getElementById("day").value;
+      const homeDelivery = document.getElementById("homeDelivery").checked;
 
-      fetch(`/search?lat=${originCoords.lat}&lng=${originCoords.lng}&radius=${radius}`)
+
+      // Function to validate radius
+      function isValidRadius(radius) {
+        return !isNaN(radius) && Number(radius) > 0;
+      }
+
+
+      // Validate radius
+      if (!isValidRadius(radius)) {
+        alert("Please enter a positive search radius.");
+        return;
+      }
+
+
+      fetch(`/search?lat=${originCoords.lat}&lng=${originCoords.lng}&radius=${radius}&day=${day}&homeDelivery=${homeDelivery}`)
         .then(res => res.json())
         .then(data => {
           markers.forEach(marker => marker.setMap(null));
@@ -248,7 +435,15 @@
             });
 
             const info = new google.maps.InfoWindow({
-              content: `<strong>${site.name}</strong><br>${site.distance} mi away <br>Phone: ${site.phone}<br><button onclick="navigateTo(${site.latitude}, ${site.longitude})">Get Directions</button>`
+              content: `<strong>${site.name}</strong><br><br>
+              <strong>Address:</strong> ${site.address}<br>
+              <strong>Distance:</strong> ${site.distance} mi away <br>
+              <strong>Phone:</strong> ${site.phone}<br>
+              <strong>Hours of Operation:</strong> ${site.hours}<br>
+              <strong>Appointment:</strong> ${site.appointment}<br>
+              <strong>Prepared Meals:</strong> ${site.Prepared_meals}<br>
+              <strong>Home Delivery:</strong> ${site.home_delivery}<br>
+              <button onclick="navigateTo(${site.latitude}, ${site.longitude})">Get Directions</button>`
             });
 
             marker.addListener("click", () => info.open(map, marker));
@@ -265,7 +460,22 @@
         window.open(`${base}&origin=${origin}&destination=${destination}&travelmode=driving`);
       });
     }
+
+    // Auto-select today's day in the dropdown
+    window.onload = () => {
+      const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+      const today = new Date();
+      const todayDay = days[today.getDay()];
+      const dayDropdown = document.getElementById("day");
+      if (dayDropdown) {
+        dayDropdown.value = todayDay;
+      }
+    };
+
+
+
   </script>
 
+  
 </body>
 </html>

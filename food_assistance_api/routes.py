@@ -146,7 +146,8 @@ def search_agencies():
     radius = float(request.args.get("radius", 5))  # Default radius = 5 miles
     lat = request.args.get("lat")  # If user selects to filter from their current location
     lng = request.args.get("lng") # If user selects to filter from their current location
-    
+    day = request.args.get("day")  # Day of the week for filtering
+    home_delivery = request.args.get("homeDelivery") == "true"  # Home delivery option
     
     # if not address:
     #     return jsonify({"error": "Address is required"}), 400
@@ -159,6 +160,7 @@ def search_agencies():
          # Convert address(zipcode to be precise) to lat/lon 
         geolocator = Nominatim(user_agent="food_assistance_locator")
         location = geolocator.geocode(address,  country_codes="us") # Limit to US locations 
+        
         if not location:
             return jsonify({"error": "Location not found"}), 404
         user_coords = (location.latitude, location.longitude)
@@ -171,26 +173,116 @@ def search_agencies():
     cursor = conn.cursor()
 
     # This query retrieves all necessary agency data with joins
-    agencies = cursor.execute("""SELECT agency_id, name, type, phone, latitude, longitude FROM agencies""")
+    agencies = cursor.execute("""SELECT a.agency_id, a.name, a.type, a.address, a.phone, a.latitude, a.longitude,
+                   h.day_of_week, h.start_time, h.end_time ,h.distribution_model, h.food_format, h.appointment_only, h.pantry_requirements,
+                   w.service, c.cultures
+            FROM agencies a
+            JOIN hours_of_operation h ON a.agency_id = h.agency_id
+            LEFT JOIN wraparound_services w ON a.agency_id = w.agency_id
+            LEFT JOIN cultures_served c ON a.agency_id = c.agency_id""")
     conn.close()
     
     nearby_agencies = []
+    
 
     for agency in agencies:
-        agency_id, name, address, phone, latitude, longitude = agency  # unpack tuple
+        agency_id, name, type, address, phone, latitude, longitude, day_of_week, start_time, end_time, distribution, food_format, appointment, pantry_req, wrap_service, culture = agency  # unpack tuple
         agency_coords = (latitude, longitude)
         distance = geodesic(user_coords, agency_coords).miles  # Calculate distance
+        
+        
+        if day_of_week is None:
+            day_of_week = "Null"
 
-        if distance <= radius:
-            nearby_agencies.append({
+        if distance <= radius and (day_of_week.lower() == day.lower() or day_of_week.lower() == "As Needed"):  # Check if the agency is within the radius and matches the day of the week
+            # Only include agencies that match the day of the week and within the radius
+            
+            
+            #### These will be used to in the location info window (fixing some inconsistencies in the database) ####
+            
+            
+            # Prepared meals availability
+            
+            if food_format is None:
+                food_format = "N/A"
+            if "Prepared meals" in food_format:
+                food_format = "Available✅"
+            else:
+                food_format = "Not available❌"
+        
+            
+            # Appointment requirements
+            
+            if appointment is None:
+                appointment = "N/A"
+            if appointment == 1:
+                appointment = "Required⚠️"
+            else:
+                appointment = "Not required✅"    
+            
+            
+            
+            # Home delivery availability
+            if distribution is None:
+                distribution = "N/A"
+            if "Home Delivery" in distribution:
+                hd_status = "Available✅"
+            else:
+                hd_status = "Not available❌"   
+                
+                
+            # Start and end times
+            if start_time is None:
+                start_time = "N/A"     
+            if end_time is None:
+                end_time = "N/A"
+            open_hours = start_time[:5] + " - " + end_time[:5]
+            
+            
+            # Dealing with address inconsistencies ('Attn:' prefix in some addresses)
+            if address[:5] == "Attn:":
+                address = address[5:]
+                    
+                
+            if "Home Delivery" in distribution and home_delivery:   # Only include agencies that offer home delivery if the user selected that option
+                nearby_agencies.append({
                 "id": agency_id,
-                "name": name,
+                "name": name.split(':')[1].strip() if ':' in name else name,
                 "latitude": latitude,
                 "longitude": longitude,
                 "distance": round(distance, 2),
-                "phone": phone if phone else "No phone number available"
+                "phone": phone if phone else "No phone number available",
+                "day": day_of_week,
+                "Prepared_meals": food_format,
+                "appointment": appointment,
+                "home_delivery": hd_status,
+                "address": address,
+                "hours": open_hours
+                
             })
-
+                
+            
+            elif not home_delivery: # If the user did not select home delivery, include all agencies that match the day of the week and are within the radius
+            
+                nearby_agencies.append({
+                    "id": agency_id,
+                    "name": name.split(':')[1].strip() if ':' in name else name,
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "distance": round(distance, 2),
+                    "phone": phone if phone else "No phone number available",
+                    "day": day_of_week,
+                    "Prepared_meals": food_format,
+                    "appointment": appointment,
+                    "home_delivery": hd_status,
+                    "address": address,
+                    "hours": open_hours
+                    
+                    
+                })
+            
+        
+    
     return jsonify(nearby_agencies)
 
 # ----------------------------
