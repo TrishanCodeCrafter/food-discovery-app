@@ -33,6 +33,15 @@
       font-size: 28px;
     }
 
+    .header-logo {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      height: 50px;
+      width: auto;
+    }
+    
+
     .content {
       display: flex;
       padding: 40px;
@@ -217,6 +226,17 @@
 
   <header>
     <h1>Food Assistance Locator <small><i> - By NourishAI 🤖</i></small></h1> 
+
+    <label for="languageSelector" style="position: absolute; left: 20px; top: 3px; font-size: 15px; font-weight: 500;"><small><i>Language:</i></small></label>
+    <div style="position: absolute; left: 20px; top: 20px;">
+      <select id="languageSelector" onchange="setLanguage(this.value)">
+      <option value="en">English</option>
+      <option value="es">Español</option>
+      <option value="ar">العربية</option>
+      </select>
+    </div>
+
+    <img src="{{ url_for('static', filename='CAFB_Logo.svg') }}" alt="CAFB Logo" class="header-logo">
   </header>
 
   <div class="content">
@@ -347,11 +367,13 @@
       const radius = document.getElementById("radius").value;
       const day = document.getElementById("day").value;
       const homeDelivery = document.getElementById("homeDelivery").checked;
-      if (!zip) return alert("Enter a ZIP code.");
+      //if (!zip) return alert("Enter a ZIP code.");
+      if (!zip) return alert(translations[currentLang].zipError);  // For Multilingual Support
       
      // Checking if ZIP exists using Zippopotam.us API
      const zipValid = await fetch(`https://api.zippopotam.us/us/${zip}`).then(res => res.ok);
-     if (!zipValid) return alert("Invalid ZIP code.");
+     //if (!zipValid) return alert("Invalid ZIP code.");
+     if (!zipValid) return alert(translations[currentLang].zipInvalid); // For Multilingual Support
         
 
       fetch(`/search?address=${zip}&radius=${radius}&day=${day}&homeDelivery=${homeDelivery}`)
@@ -367,7 +389,9 @@
           markers.forEach(marker => marker.setMap(null));
           markers = [];
 
-          if (data.length === 0) return alert("No centers found.");
+          //if (data.length === 0) return alert("No centers found.");
+          if (data.length === 0) return alert(translations[currentLang].noCenters); // For Multilingual Support
+
         
           map.setCenter({ lat: data[0].latitude, lng: data[0].longitude });
 
@@ -398,24 +422,11 @@
     }
 
     function searchFromCurrentLocation() {
-      if (!originCoords) return alert("Unable to get your location.");
+      //if (!originCoords) return alert("Unable to get your location.");
+      if (!originCoords) return alert(translations[currentLang].locationError); // For Multilingual Support
       const radius = document.getElementById("radius").value || 5;
       const day = document.getElementById("day").value;
       const homeDelivery = document.getElementById("homeDelivery").checked;
-
-
-      // Function to validate radius
-      function isValidRadius(radius) {
-        return !isNaN(radius) && Number(radius) > 0;
-      }
-
-
-      // Validate radius
-      if (!isValidRadius(radius)) {
-        alert("Please enter a positive search radius.");
-        return;
-      }
-
 
       fetch(`/search?lat=${originCoords.lat}&lng=${originCoords.lng}&radius=${radius}&day=${day}&homeDelivery=${homeDelivery}`)
         .then(res => res.json())
@@ -423,7 +434,9 @@
           markers.forEach(marker => marker.setMap(null));
           markers = [];
 
-          if (data.length === 0) return alert("No centers found.");
+          //if (data.length === 0) return alert("No centers found.");
+          if (data.length === 0) return alert(translations[currentLang].noCenters); // For Multilingual Support
+
           map.setCenter(originCoords);
 
           data.forEach(site => {
@@ -472,7 +485,72 @@
       }
     };
 
+    // Multilingual Support
 
+
+    const translations = {
+      en: {
+        zipLabel: "ZIP Code",
+        radiusLabel: "Search Radius (miles)",
+        searchZip: "Search by ZIP",
+        searchCurrent: "Search From My Location 📌",
+        dayLabel: "Day of the Week",
+        homeDelivery: "I prefer home delivery (if available)",
+        zipError: "Enter a ZIP code.",
+        zipInvalid: "Invalid ZIP code.",
+        noCenters: "No centers found.",
+        locationError: "Unable to get your location.",
+        languageLabel: "Language"
+      },
+      es: {
+        zipLabel: "Código Postal",
+        radiusLabel: "Radio de Búsqueda (millas)",
+        searchZip: "Buscar por Código",
+        searchCurrent: "Buscar desde mi ubicación 📌",
+        dayLabel: "Día de la semana",
+        homeDelivery: "Prefiero entrega a domicilio (si está disponible)",
+        zipError: "Ingrese un código postal.",
+        zipInvalid: "Código postal inválido.",
+        noCenters: "No se encontraron centros.",
+        locationError: "No se pudo obtener su ubicación.",
+        languageLabel: "Idioma"
+      },
+      ar: {
+        zipLabel: "الرمز البريدي",
+        radiusLabel: "نطاق البحث (أميال)",
+        searchZip: "ابحث باستخدام الرمز البريدي",
+        searchCurrent: "ابحث من موقعي 📌",
+        dayLabel: "يوم الأسبوع",
+        homeDelivery: "أفضل التوصيل المنزلي (إن وجد)",
+        zipError: "يرجى إدخال الرمز البريدي.",
+        zipInvalid: "رمز بريدي غير صالح.",
+        noCenters: "لم يتم العثور على مراكز.",
+        locationError: "تعذر الحصول على موقعك.",
+        languageLabel: "اللغة"
+      }
+    };
+  
+    let currentLang = "en";
+  
+    function setLanguage(lang) {
+      currentLang = lang;
+      const t = translations[lang];
+  
+      // Labels
+      document.querySelector('label[for="zip"]').textContent = t.zipLabel;
+      document.querySelector('label[for="radius"]').textContent = t.radiusLabel;
+      document.querySelector('label[for="day"]').textContent = t.dayLabel;
+      document.querySelector('.toggle-label').textContent = t.homeDelivery;
+      document.querySelector('label[for="languageSelector"]').textContent = t.languageLabel;
+  
+      // Buttons
+      document.querySelector('button[onclick="search()"]').textContent = t.searchZip;
+      document.querySelector('button[onclick="searchFromCurrentLocation()"]').textContent = t.searchCurrent;
+  
+      // RTL Support
+      document.body.dir = lang === "ar" ? "rtl" : "ltr";
+    }
+      
 
   </script>
 
