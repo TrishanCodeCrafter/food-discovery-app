@@ -359,9 +359,9 @@
           if (!res.ok) {
             const errorData = await res.json();
             return alert(errorData.error || "An unexpected error occurred.");
-            return [];
+            //return [];
           }
-          //return res.json();
+          return res.json();
         })
         .then(data => {
           markers.forEach(marker => marker.setMap(null));
